@@ -1,0 +1,148 @@
+Working with nginx
+
+--> sudo apt update
+--> sudo apt install nginx
+to check if ubuntu firewall is installed use 
+--> ufw --version
+adjust firewall to allow nginx work
+--> sudo ufw app list (this show what firewall allows)
+--> sudo ufw allow 'Nginx HTTP'
+to check if configuration is correct use
+--> sudo ufw status
+to enable nginx use
+--> sudo ufw enable
+to allow OpenSSH use
+-->sudo ufw allow 'OpenSSH'
+to check if nginx is running or not use
+-->sudo service nginx status
+or use
+-->sudo systemctl status nginx
+command for ip address
+-->curl -4 icanhazip.com
+--> curl localhost
+how to stop nginx server
+--> sudo systemctl stop nginx
+to start nginx server
+-->sudo systemctl start nginx
+to make configuration changes use
+--> sudo systemctl reload nginx
+to see default configuration 
+1st path
+--> cd /var/www
+--> ls (this list html folder)
+--> cd html
+--> ls
+--> cat index.nginx-debian.html
+-->cd .. (to take you back to where we were before)
+-->cd /etc/nginx
+-->ls
+-->cd sites-available-->ls (This will show default)
+-->less default
+-->cd ..
+copy default file in sites-available into another file
+-->sudo cp default default.bak
+--> cd .. (Go back home)
+let's write a script to configure nginx server
+this will automate our nginx task
+-->vim nginx-conf-script
+write the below script inside the vim screen
+
+#!/usr/bin/env bash
+apt-get update
+apt-get install -y nginx
+
+echo "Hello World" > /var/www/html/index.html
+
+echo "Resource not available" > /var/www/html/404.html
+
+cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
+
+printf %s "server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	root /var/www/html/;
+	index index.html index.html;
+
+	error_page 404 /404.html;
+	location /404 {
+		root /var/www/html;
+		internal;
+	}
+
+}
+" > /etc/nginx/sites-available/default
+
+save the script
+to run the script first give permission to run the file
+--> chmod u+x nginx-conf-script
+
+then run below code
+--> sudo ./nginx-conf-script
+
+to configure a new domain, use
+-->sudo mkdir -p /var/www/wakanda/html
+
+assign ownership of the file to work easily with it use below code
+-->sudo chown -R $USER:$USER /var/www/wakanda/html
+
+we need to give permission so that users can do Write, Read, Execute
+-->sudo chmod -R 755 /var/www/wakanda
+
+we can now create index.html
+-->sudo vim /var/www/wakanda/html/index.html
+
+now write the below inside the file then save
+
+<html>
+	<head>
+		<title> Welcome to Wakanda!</title>
+	</head>
+	<body>
+		<h1>Wakanda Forever</h1>
+	</body>
+</html>
+
+the next thing is to create a server block, defualt configuration on different file
+
+--> sudo vim /etc/nginx/sites-available/wakanda
+
+write the below script inside the vim
+
+server {
+	listen 80;
+	listen [::]:80;
+
+	root /var/www/wakanda/html;
+	index index.html index.html index.nginx-debian.html
+
+	server_name wakanda www.wakanda.com;
+
+	location / {
+		try_files $uri $uri/ =404;
+	}
+}
+
+the next step is to enable our new website, we need to create a soft link.
+why do we need the soft link? We need it because we are trying to connect site enabled to the site available, which means anything that change in site available will reflect in site enabled
+
+-->sudo ln -s /etc/nginx/sites-available/wakanda /etc/nginx/sites-enabled/
+
+if we are hosting more than two sites, we need to change nginx configuration file
+-->sudo vim /etc/nginx/nginx.conf
+NB: Inside the config file, uncomment server_names_hash_bucket_size 64;
+this will protect us from any memory related issues
+
+to check our nginx.com is working fine or not, run the below code
+--> sudo nginx -t
+
+to restart our service, use the below code
+-->sudo systemctl restart nginx
+
+
+
+
+
+
+
+
+
